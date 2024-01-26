@@ -8,6 +8,8 @@ source parametres.sh
 
 if [ ! -d "$result_dir" ]; then mkdir -p "$result_dir"; fi
 
+cp parametres.sh "$result_dir"
+
 #nanoplot
 nanoplot_avant="$result_dir/nanoplot_avant_traitement/"
 
