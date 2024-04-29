@@ -2,6 +2,7 @@ import pandas as pd
 import sys
 from IPython.core.display import HTML
 import plotly.express as px
+import numpy as np
 
 # Import des variables depuis le script bash parametres.sh
 result_dir = sys.argv[1]
@@ -42,11 +43,11 @@ merged_df = pd.merge(mc,comp_result, on='species', how='outer', suffixes=('_atte
 # utilisation de la fonction .fillna pour remplacer les NaN par des 0
 merged_df = merged_df.fillna(0)
 # Ajout de la colonne difference en faisant la difference de composition attendue et composition observee
-merged_df['difference'] = merged_df['composition_attendue'] - merged_df['composition_observee']
+merged_df['difference'] = merged_df['composition_attendue'] - merged_df['composition_observee'] 
 
 
 #calcul du taux d erreur moyen
-taux_erreur_moyen_comp = sum(merged_df['difference'])/len(merged_df)
+diff_moyenne_comp = sum(merged_df['difference'])/len(merged_df)
 
 
 ###### CREATION DE LA DATAFRAME ESPECES COMMUNES ######
@@ -54,8 +55,9 @@ taux_erreur_moyen_comp = sum(merged_df['difference'])/len(merged_df)
 # meme fonctionnement que pour la dataframe comparaisons
 communes_df = merged_df.loc[(merged_df[['composition_attendue', 'composition_observee']] != 0).all(axis=1)]
 communes_df.loc[:, 'difference'] = communes_df['composition_attendue'] - communes_df['composition_observee']
-
-taux_erreur_moyen = sum(communes_df['difference'])/len(communes_df)
+communes_df.loc[:, 'taux_erreur'] = (communes_df['composition_attendue'] - communes_df['composition_observee']) / communes_df['composition_attendue']
+diff_moyenne = sum(communes_df['difference'])/len(communes_df)
+taux_erreur_moyen_especes_communes = sum(communes_df['taux_erreur'])/len(communes_df)
 
 ###### CREATION DE LA DATAFRAME DIFFERENCES ######
 
@@ -67,32 +69,30 @@ differentes_df = merged_df.loc[(merged_df[['composition_attendue', 'composition_
 #############################
 ##### CREATION DU GRAPH #####
 #############################
-
-plot_file=f"{resultat_dir}plot.html"
-# Basé sur le dataframe
 y = merged_df["species"].astype(str)
 # Obtention des valeurs par rapport à chaque valeur de y
 x = merged_df["difference"]
 
-#creation du graphique
+# Création du graphique
 fig = px.bar(x=x, y=y, orientation='h', labels={'x': 'Différence', 'y': 'Espèces'}, title='Graphique barre horizontal')
 
-
+# Conversion du graphique en HTML
+html_fig = fig.to_html(full_html=False)
 
 #####################################
 ###### CREATIONS FICHIERS HTLM ######
 #####################################
 
-#### AJOUT DES PARAMETRES DANS LE FICHIERS ####
+#### AJOUT DES HTML DANS LE FICHIER ####
 
 html_mc = mc.to_html(index=False)
 html_comp_result = comp_result.to_html(index=False)
 html_merged_df = merged_df.to_html(index=False)
 html_communes_df = communes_df.to_html(index=False)
 html_differentes_df = differentes_df.to_html(index=False)
-html_tem = f"<p style='color:red; font-size:85%'>{taux_erreur_moyen}</p>"
-html_tem_comp = f"<p style='color:red; font-size:85%'>{taux_erreur_moyen_comp}</p>"
-
+html_diff_moyenne = f"<p style='color:red; font-size:85%'>{diff_moyenne}</p>"
+html_diff_moyenne_comp = f"<p style='color:red; font-size:85%'>{diff_moyenne_comp}</p>"
+html_taux_erreur_moyen_especes_communes = f"<p style='color:red; font-size:85%'>{taux_erreur_moyen_especes_communes}</p>"
 html_liste_parametres = ""
 for i in range(0, len(liste_parametres), 2):
     html_liste_parametres += f"<p style='font-size:80%'>{liste_parametres[i]}: {liste_parametres[i+1]}</p>"
@@ -115,21 +115,24 @@ html_combined = f"""
     {html_comp_result}
 
     <h2>Comparaison</h2>
-    {html_merged_df}
-    
-    <h2>Taux erreurs moyen:</h2>
-    <p>{html_tem_comp}</p>
+    {html_merged_df}    
+    <h2>Différences moyenne entre les espèces:</h2>
+    <p>{html_diff_moyenne_comp}</p>
+
 
     <h2>Espèces communes</h2>
     {html_communes_df}
-    <h2>Taux erreurs moyen pour les espèces communes:</h2>
-    <p>{html_tem}</p>
+    <h2>différence moyenne pour les espèces communes:</h2>
+    <p>{html_diff_moyenne}</p>
+    <h2>Taux erreur moyen pour les espèces communes:</h2>
+    <p>{html_taux_erreur_moyen_especes_communes}</p>
+
     <h2>Différences observées</h2>
     {html_differentes_df}
     
     <h2>Graphique Différence entre la composition attendue et la composition observée </h2>
     <!-- Ajout du graphique dans le HTML -->
-    <iframe src="{plot_file}" width="800" height="600"></iframe>
+    <iframe src="{html_fig}" width="800" height="600"></iframe>
   </body>
 </html>
 """
