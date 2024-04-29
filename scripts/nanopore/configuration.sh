@@ -6,10 +6,12 @@ data_dir="/home/mlecorre/metabarcoding_nanopore/data_test"
 summary_dir="/home/mlecorre/metabarcoding_nanopore/data/sequencing_summary_FAW93216_3bdc7dd0_6a0e5917.txt"
 
 #chemin d'acces des resultats
-results="/home/mlecorre/metabarcoding_nanopore/results/test_test1"
+results="/home/mlecorre/metabarcoding_nanopore/results/q14_minl1480_maxlength1626"
 
 #chemin d'acces du excel qui contient les valeurs de la mock community
 mc="/home/mlecorre/metabarcoding_nanopore/data/mock_community.csv"
+
+class_dir="$results/classification"
 
 #nombre  de thread accordé au pipeline 
 threads=15
