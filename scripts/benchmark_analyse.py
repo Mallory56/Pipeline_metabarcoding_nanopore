@@ -1,95 +1,95 @@
 import pandas as pd
 import numpy as np
-import sys
 
-result_path = sys.argv[1]
-mc_path = sys.argv[2] 
+# Paths to the files
+result_path = "/home/mlecorre/pipeline/results/benchmark_tiny/classification/emu-combined-abundance-species.tsv"
+mc_path = "/home/mlecorre/metabarcoding_nanopore/data/mock_community.csv"
 
-#result_path = "/home/mlecorre/pipeline/results/benchmark_tiny/classification/emu-combined-abundance-species.tsv"
-#mc_path = "/home/mlecorre/metabarcoding_nanopore/data/mock_community.csv" 
-
+# download the data in a dataframe
 results = pd.read_csv(result_path, sep='\t')
 mc = pd.read_csv(mc_path, sep='\t')
 
-
-# Normalisation des noms d'espèces
+# supp capital letter
 results['species'] = results['species'].str.lower()
 mc['species'] = mc['species'].str.lower()
 
-# Fusion des DataFrames
+# Merge the DataFrames
 combined_df = pd.merge(mc, results, on='species', how='outer')
 
-# Conversion correcte des valeurs de 'composition'
+# Convert the values in compositions in float
 combined_df['composition'] = combined_df['composition'].replace({',': '.'}, regex=True).astype(float)
 
-# Remplacement des valeurs manquantes par 0
+# Replace missing values with 0
 combined_df = combined_df.fillna(0)
 
-# Conversion des noms d'espèces en chaînes de caractères sans espaces
+# Convert names in str
 combined_df['species'] = combined_df['species'].astype(str).str.strip()
+
+print("Combined DataFrame:")
 print(combined_df)
-# Définir les espèces comme index
+
+# Set species as index
 combined_df.set_index('species', inplace=True)
 
-# Liste des colonnes de scores
-col_qscore = combined_df.columns[1:]  # Exclude 'composition'
-def fdr(FP, TP):
-    return FP / (FP + TP) if (FP + TP) != 0 else np.nan
+# Put the score column in a list
+col_qscore = combined_df.columns[1:]
 
-# Fonction pour calculer l'indice de Bray-Curtis
-def bray_curtis(diff_abs, total_sum):
-    numerator = np.sum(diff_abs)
-    denominator = np.sum(total_sum)
-    return (numerator / denominator) if denominator != 0 else np.nan
-
-# Fonction pour calculer la MAE
-def mean_absolute_error(diff_abs):
-    return np.mean(diff_abs) if len(diff_abs) > 0 else np.nan
-
-# Calcul du FDR, de l'indice de Bray-Curtis et de la MAE pour chaque colonne de score
-results_summary = {'column': [], 'fdr': [], 'bray_curtis': [], 'mae': []}
-
+# Multiply abundance values given by emu by 100
 for col in col_qscore:
-    # Initialisation des compteurs pour chaque colonne
-    tp = 0
-    fp = 0
-    differences_abs = []
-    total_sums = []
-    
-    # Calcul des TP et FP, des différences absolues et des sommes totales pour chaque colonne
-    for sp in combined_df.index:
+    combined_df[col] = combined_df[col] * 100
+
+# initialisation of a dictionnary containing the metrics ( to facilitate the creation of the dataframe later )
+results_summary = {'column': [], 'bray_curtis': [], 'mae': [], 'fdr': []}
+
+print(combined_df)
+
+# Calculate Bray-Curtis, MAE, and FDR
+for col in col_qscore:
+  
+    att_esp = combined_df[combined_df['composition'] > 0]
+    total_esp = combined_df[combined_df[col] > 0]
+
+    numerator = 0
+    denominator = 0
+    mae = 0
+    false_positive = 0
+    total_positive = total_esp.shape[0]
+
+    for sp in att_esp.index:
+        x_i = combined_df.loc[sp, 'composition']
+        y_i = combined_df.loc[sp, col]
         
-        composition = combined_df.loc[sp, 'composition']
-        score = combined_df.loc[sp, col]
-        
-        if composition > 0 and score > 0:
-            tp += 1
-        elif composition == 0 and score > 0:
-            fp += 1
-        
-        # Calcul des différences absolues et des sommes totales
-        diff_abs = np.abs(composition - score)
-        total_sum = composition + score
-        
-        differences_abs.append(diff_abs)
-        total_sums.append(total_sum)
-    # Calculer le FDR pour la colonne
-    fdr_value = fdr(fp, tp)
-    
-    # Calculer l'indice de Bray-Curtis avec les différences absolues et les sommes totales
-    avg_bray_curtis = bray_curtis(np.array(differences_abs), np.array(total_sums))
-    
-    # Calculer la moyenne des erreurs absolues pour la colonne
-    avg_mae = mean_absolute_error(differences_abs)
-    
-    # Stocker les résultats
+        numerator += min(x_i, y_i) * 2
+        denominator += x_i + y_i
+        mae += abs(x_i - y_i)
+
+    # False Discovery Rate (FDR)
+    false_positive = total_positive - att_esp.shape[0]
+    if total_positive > 0:
+        fdr = false_positive / total_positive
+    else:
+        fdr = np.nan
+
+    # Mean Absolute Error (MAE)
+    mae /= att_esp.shape[0]
+
+    if denominator > 0:
+        bray_curtis = numerator / denominator
+    else:
+        bray_curtis = np.nan 
+
     results_summary['column'].append(col)
-    results_summary['fdr'].append(fdr_value)
-    results_summary['bray_curtis'].append(avg_bray_curtis)
-    results_summary['mae'].append(avg_mae)
+    results_summary['bray_curtis'].append(bray_curtis)
+    results_summary['mae'].append(mae)
+    results_summary['fdr'].append(fdr)
+    
+    print(f"Column: {col}, Bray-Curtis: {bray_curtis}, MAE: {mae}, FDR: {fdr}")
 
-# Convertir les résultats en DataFrame pour une présentation facile
+# Convert results to DataFrame for better readability
 results_df = pd.DataFrame(results_summary)
-
-# Afficher les résultats
+print("Results Summary DataFrame:")
 print(results_df)
+
+# Save to Excel files
+combined_df.to_excel('/home/mlecorre/pipeline/results/benchmark_tiny/combined_df.xlsx', sheet_name='Combined Data')
+results_df.to_excel('/home/mlecorre/pipeline/results/benchmark_tiny/results_summary.xlsx', sheet_name='Results Summary')
