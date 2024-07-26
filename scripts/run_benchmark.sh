@@ -16,8 +16,6 @@ echo "   "
 # Source des conda
 source $(conda info --base)/etc/profile.d/conda.sh
 
-qualite=(10 11 12)
-
 # Variable data_dir et results (assurez-vous de les définir avant)
 echo "data dir : $data_dir"
 
