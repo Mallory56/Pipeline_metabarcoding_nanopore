@@ -1,9 +1,12 @@
 import pandas as pd
 import numpy as np
+import sys
 
 # Paths to the files
-result_path = "/home/mlecorre/pipeline/results/benchmark_tiny/classification/emu-combined-abundance-species.tsv"
-mc_path = "/home/mlecorre/metabarcoding_nanopore/data/mock_community.csv"
+result_path = sys.argv[1]
+mc_path = sys.argv[2]
+results_dir = sys.argv[3]
+
 
 # download the data in a dataframe
 results = pd.read_csv(result_path, sep='\t')
@@ -85,11 +88,10 @@ for col in col_qscore:
     
     print(f"Column: {col}, Bray-Curtis: {bray_curtis}, MAE: {mae}, FDR: {fdr}")
 
-# Convert results to DataFrame for better readability
+
+
 results_df = pd.DataFrame(results_summary)
-print("Results Summary DataFrame:")
-print(results_df)
 
 # Save to Excel files
-combined_df.to_excel('/home/mlecorre/pipeline/results/benchmark_tiny/combined_df.xlsx', sheet_name='Combined Data')
-results_df.to_excel('/home/mlecorre/pipeline/results/benchmark_tiny/results_summary.xlsx', sheet_name='Results Summary')
+combined_df.to_excel(results_dir + '_combined_df.xlsx', sheet_name='Combined Data')
+results_df.to_excel(results_dir + '_results_summary.xlsx', sheet_name='Results Summary')
