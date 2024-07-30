@@ -3,8 +3,7 @@
 # Source the file with the function to apply ( the pipeline)
 source pipeline_nanopore.sh
 
-# Affichage de la liste finale
-echo "Votre liste : ${user_list[@]}"
+scripts_dir=$(pwd)
 
 # Source the configuration file
 source configuration_benchmark.sh
@@ -37,12 +36,12 @@ else
     echo "error: $data_dir doesn't exist."
 fi
 
-conda activate py37
+conda activate pipPy37
 
 emu combine-outputs "$class_dir" species --split-tables
 
 # Création du rapport MultiQC
-conda activate py38
+conda activate pipPy38
 path_report="$results/report/"
 multiqc_report "$path_report"
 
@@ -60,5 +59,6 @@ fi
 
 conda deactivate 
 # Appeler le script Python avec les chemins corrects
-cd /home/mlecorre/pipeline/scripts/
+cd $scripts_dir
 python benchmark_analyse.py "$result_path" "$mc" "$results"
+
