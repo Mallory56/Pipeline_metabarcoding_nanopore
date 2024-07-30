@@ -58,10 +58,7 @@ if [ -z "$result_path" ]; then
     exit 1
 fi
 
+conda deactivate 
 # Appeler le script Python avec les chemins corrects
 cd /home/mlecorre/pipeline/scripts/
-python benchmark_analyse.py "$result_path" "$mc"
-
-
-
-
+python benchmark_analyse.py "$result_path" "$mc" "$results"
